@@ -10,21 +10,52 @@ const panda = {
 };
 
 let obstacles = [];
+let boosts = [];
 let score = 0;
 let gameOver = false;
+let boostActive = false;
+let boostTimer = 0;
 
 function drawPanda() {
-  ctx.fillStyle = "white";
-  ctx.fillRect(panda.x, panda.y, panda.width, panda.height);
-  ctx.fillStyle = "black";
-  ctx.fillRect(panda.x + 10, panda.y + 10, 5, 5);
-  ctx.fillRect(panda.x + 25, panda.y + 10, 5, 5);
+  // Head
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(panda.x + panda.width / 2, panda.y + panda.height / 2, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = "#000000";
+  ctx.beginPath();
+  ctx.arc(panda.x + 5, panda.y + 5, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(panda.x + panda.width - 5, panda.y + 5, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.beginPath();
+  ctx.arc(panda.x + 10, panda.y + 15, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(panda.x + panda.width - 10, panda.y + 15, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nose
+  ctx.beginPath();
+  ctx.arc(panda.x + panda.width / 2, panda.y + 25, 2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawObstacles() {
-  ctx.fillStyle = "green";
   obstacles.forEach(obs => {
-    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+    // Tree trunk
+    ctx.fillStyle = "#8B4513";
+    ctx.fillRect(obs.x + obs.width / 3, obs.y + obs.height / 2, obs.width / 3, obs.height / 2);
+    // Tree foliage
+    ctx.fillStyle = "#228B22";
+    ctx.beginPath();
+    ctx.arc(obs.x + obs.width / 2, obs.y + obs.height / 2, obs.width / 1.2, 0, Math.PI * 2);
+    ctx.fill();
   });
 }
 
@@ -48,8 +79,43 @@ function spawnObstacle() {
   obstacles.push({ x, y: -40, width: 40, height: 40 });
 }
 
+function drawBoosts() {
+  boosts.forEach(b => {
+    ctx.fillStyle = "#00cc00";
+    ctx.beginPath();
+    ctx.moveTo(b.x + 10, b.y);
+    ctx.lineTo(b.x + 15, b.y + 10);
+    ctx.lineTo(b.x + 5, b.y + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(b.x + 9, b.y + 10, 2, 10);
+  });
+}
+
+function updateBoosts() {
+  for (let b of boosts) {
+    b.y += 3;
+    if (
+      panda.x < b.x + b.width &&
+      panda.x + panda.width > b.x &&
+      panda.y < b.y + b.height &&
+      panda.y + panda.height > b.y
+    ) {
+      boostActive = true;
+      boostTimer = 300;
+      b.collected = true;
+    }
+  }
+  boosts = boosts.filter(b => b.y < canvas.height && !b.collected);
+}
+
+function spawnBoost() {
+  const x = Math.floor(Math.random() * (canvas.width - 20));
+  boosts.push({ x, y: -20, width: 20, height: 20 });
+}
+
 function drawScore() {
-  ctx.fillStyle = "black";
+  ctx.fillStyle = boostActive ? "#00cc00" : "black";
   ctx.font = "20px sans-serif";
   ctx.fillText("Score: " + score, 10, 30);
 }
@@ -69,22 +135,54 @@ function restartGame() {
   requestAnimationFrame(gameLoop);
 }
 
+let keys = {};
 document.addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft" && panda.x > 0) panda.x -= panda.speed;
-  if (e.key === "ArrowRight" && panda.x < canvas.width - panda.width) panda.x += panda.speed;
+  keys[e.key] = true;
+});
+document.addEventListener("keyup", e => {
+  keys[e.key] = false;
+});
+
+// Touch controls for mobile
+let isTouching = false;
+canvas.addEventListener("touchstart", e => {
+  isTouching = true;
+});
+canvas.addEventListener("touchmove", e => {
+  if (isTouching && e.touches.length > 0) {
+    const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+    panda.x = touchX - panda.width / 2;
+    if (panda.x < 0) panda.x = 0;
+    if (panda.x > canvas.width - panda.width) panda.x = canvas.width - panda.width;
+  }
+});
+canvas.addEventListener("touchend", () => {
+  isTouching = false;
 });
 
 let frame = 0;
 function gameLoop() {
   if (gameOver) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (keys["ArrowLeft"] && panda.x > 0) panda.x -= panda.speed;
+  if (keys["ArrowRight"] && panda.x < canvas.width - panda.width) panda.x += panda.speed;
+
   drawPanda();
   drawObstacles();
+  drawBoosts();
   updateObstacles();
+  updateBoosts();
   drawScore();
+
   if (frame % 60 === 0) {
     spawnObstacle();
-    score++;
+    if (Math.random() < 0.2) spawnBoost();
+    score += boostActive ? 5 : 1;
+  }
+
+  if (boostActive) {
+    boostTimer--;
+    if (boostTimer <= 0) boostActive = false;
   }
   frame++;
   requestAnimationFrame(gameLoop);
