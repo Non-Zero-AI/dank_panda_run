@@ -15,6 +15,8 @@ let score = 0;
 let gameOver = false;
 let boostActive = false;
 let boostTimer = 0;
+let continues = 0;
+let survivalTime = 0;
 
 function drawPanda() {
   // Head
@@ -103,6 +105,7 @@ function updateBoosts() {
     ) {
       boostActive = true;
       boostTimer = 300;
+      continues++;
       b.collected = true;
     }
   }
@@ -116,11 +119,17 @@ function spawnBoost() {
 
 function drawScore() {
   ctx.fillStyle = boostActive ? "#00cc00" : "black";
-  ctx.font = "20px sans-serif";
-  ctx.fillText("Score: " + score, 10, 30);
+  ctx.font = "16px sans-serif";
+  ctx.fillText("Score: " + score, 10, 20);
+  ctx.fillText("Continues: " + continues, 10, 40);
+  ctx.fillText("Time: " + Math.floor(survivalTime / 60) + "s", 10, 60);
 }
 
 function endGame() {
+  if (continues > 0) {
+    continues--;
+    return;
+  }
   gameOver = true;
   document.getElementById("finalScore").innerText = "Score: " + score;
   document.getElementById("gameOverScreen").classList.remove("hidden");
@@ -161,6 +170,8 @@ canvas.addEventListener("touchend", () => {
 });
 
 let frame = 0;
+let boostSpawnTimer = Math.floor(Math.random() * 600) + 600; // 10–20 seconds at 60fps
+
 function gameLoop() {
   if (gameOver) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -176,14 +187,19 @@ function gameLoop() {
 
   if (frame % 60 === 0) {
     spawnObstacle();
-    if (Math.random() < 0.2) spawnBoost();
     score += boostActive ? 5 : 1;
+  }
+
+  if (frame % boostSpawnTimer === 0) {
+    spawnBoost();
+    boostSpawnTimer = Math.floor(Math.random() * 600) + 600;
   }
 
   if (boostActive) {
     boostTimer--;
     if (boostTimer <= 0) boostActive = false;
   }
+  survivalTime++;
   frame++;
   requestAnimationFrame(gameLoop);
 }
