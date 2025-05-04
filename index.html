@@ -15,8 +15,17 @@
     <p id="finalScore"></p>
     <button onclick="restartGame()">Restart</button>
   </div>
-  <img id="treeSprite" src="tree.png" style="display:none" />
-  <img id="boostSprite" src="boost.png" style="display:none" />
+  <img id="pandaSprite" src="panda.png" style="display:none" />
+  <img id="weedSprite" src="weed.png" style="display:none" />
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      const name = user.username || user.first_name || "Player";
+      document.getElementById("leaderboard").innerText = "User: @" + name + " | High Score: 0";
+    }
+  </script>
   <script src="game.js"></script>
 </body>
 </html>
